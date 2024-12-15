@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Array for steamID and username
+# Array for Steam ID and username
 declare -A steam_id_to_username
 
 # Home Assistant notification with Long-Lived Access key and DEVICE_NAME
@@ -24,12 +24,12 @@ extract_steam_id() {
 }
 
 # Username detection
-handle_username_detection_event() {
+username_detect() {
     local line="$1"
     username=$(echo "$line" | awk -F' from ' '{print $2}' | cut -d':' -f1)
     echo "valheim-linuxgsm-homeassistant: Character ZDOID detected for username: $username"
 
-    # Add the association to the associative array
+    # Add association to array
     steam_id=$(extract_steam_id "$line")
     steam_id_to_username["$steam_id"]="$username"
     echo "Added association: Steam ID -> Username: $steam_id -> $username"
@@ -37,23 +37,23 @@ handle_username_detection_event() {
     # Send connection notification if SteamID is already connected
     if [[ "$line" == *"Got character ZDOID from "* ]]; then
         if [[ -n "${steam_id_to_username[$steam_id]}" ]]; then
-            send_notification "User Connection: $username"
+            send_notification "User Connected: $username"
         fi
     fi
 }
 
-# Handle connection or disconnection event
-handle_connection_or_disconnection_event() {
+# Connect or disconnect detection
+connect_or_disconnect() {
     local line="$1"
     
     if [[ "$line" == *"Got connection SteamID"* ]]; then
         steam_id=$(extract_steam_id "$line")
         echo "valheim-linuxgsm-homeassistant: Connection detected for Steam ID: $steam_id"
 
-        # Check the associative array for username association
+        # Check array for username association
         if [[ -n "${steam_id_to_username[$steam_id]}" ]]; then
             username="${steam_id_to_username[$steam_id]}"
-            send_notification "User Connection: $username"
+            send_notification "User Connected: $username"
         else
             echo "valheim-linuxgsm-homeassistant: No username association found for Steam ID: $steam_id"
         fi
@@ -65,10 +65,10 @@ handle_connection_or_disconnection_event() {
         # Get username from array
         if [[ -n "${steam_id_to_username[$steam_id]}" ]]; then
             username="${steam_id_to_username[$steam_id]}"
-            send_notification "User Disconnection: $username"
+            send_notification "User Disconnected: $username"
         fi
 
-        # Remove array after disconnection
+        # Remove array after disconnect
         unset steam_id_to_username["$steam_id"]
     fi
 }
